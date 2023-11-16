@@ -16,7 +16,7 @@ nc
 9
 8
 7
-5V (resistance pour retro eclairage)
+5V (resistance pour retro éclairage)
 GND 16
 */
 
@@ -95,11 +95,10 @@ void fonction_interrupt_anemometre(){
 
 
 void fonction_interrupt_pluviometre(){
-  dernier_tick_pluviometre,temps_pluviometre_interrupt[interrupt_pluviometre] = millis();
+  temps_pluviometre_interrupt[interrupt_pluviometre] = millis();
+  dernier_tick_pluviometre = temps_pluviometre_interrupt[interrupt_pluviometre];
   interrupt_pluviometre = !interrupt_pluviometre;
 }
-
-//(3600000/temps_pluviometre)*0.2794
 
 //code principal
 
@@ -201,9 +200,11 @@ void loop() {
 
   dernier_etat_boutton = etat_boutton;
 
-  temps_pluviometre = temps_pluviometre_interrupt[interrupt_pluviometre]-temps_pluviometre_interrupt[interrupt_pluviometre+1];
   if((dernier_tick_pluviometre+60000) > millis()){
     temps_pluviometre = 0;
+  }
+  else {
+    temps_pluviometre = temps_pluviometre_interrupt[interrupt_pluviometre] - temps_pluviometre_interrupt[interrupt_pluviometre + 1];
   }
 
   lcd.setCursor(0,1);
@@ -230,7 +231,8 @@ void loop() {
 
   case 1: //pluie
     lcd.setCursor(4,1);
-    lcd.print("Rien");
+    lcd.print((3600000/temps_pluviometre)*0.2794);
+    lcd.print ("mm/m2");
     break;
 
   case 2: //lumière
@@ -259,6 +261,8 @@ void loop() {
     break;
   }
 
+  //maquette écran
+  
   //maquette vent
   //0123456789ABCDEF
   //Vent:Pas de vent
