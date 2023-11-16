@@ -210,7 +210,7 @@ void loop() {
     }
     else{
       lcd.setCursor(6,0);
-      lcd.print(vitesse);
+      lcd.print(vitess);
       lcd.setCursor(12,0);
       lcd.print("km/h");
       lcd.setCursor(0,1);
