@@ -1,0 +1,5 @@
+F:\Jetbrains\CLion\bin\cmake\win\x64\bin\cmake.exe -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=F:/Jetbrains/CLion/bin/ninja/win/x64/ninja.exe -G Ninja -S "D:\L1\Objets_co\Station météo\Station" -B "D:\L1\Objets_co\Station météo\Station\cmake-build-debug"
+-- Configuring done (0.4s)
+CMake Error: CMake can not determine linker language for target: Station
+-- Generating done (0.0s)
+CMake Generate step failed.  Build files cannot be regenerated correctly.
