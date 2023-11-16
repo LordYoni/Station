@@ -11,7 +11,7 @@
 </head>
 <body>
 <div class="login-container">
-    <form id="loginForm">
+    <form id="loginForm" autocomplete="off">
         <h2>Connexion</h2>
         <div class="input-group">
             <label for="username">Identifiant</label>
