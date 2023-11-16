@@ -99,6 +99,8 @@ void fonction_interrupt_pluviometre(){
   interrupt_pluviometre = !interrupt_pluviometre;
 }
 
+//(3600000/temps_pluviometre)*0.2794
+
 //code principal
 
 void setup() {
