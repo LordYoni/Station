@@ -204,7 +204,7 @@ void loop() {
   case 0: //vent
     lcd.setCursor(5,0);
     lcd.print("           ");
-    if(!vitesse){
+    if(!vitess){
       lcd.setCursor(5,0);
       lcd.print("Pas de vent");
     }
