@@ -262,7 +262,7 @@ void loop() {
   }
 
   //maquette écran
-  
+
   //maquette vent
   //0123456789ABCDEF
   //Vent:Pas de vent
