@@ -75,12 +75,13 @@ float vitesse; //vitesse du vent en km/h
 byte direction_vent; //index dans le tableaux des points cardinaux
 word valeur_tension; //tension lue de girouette
 
+//capteur pluie
+unsigned long temps_pluviometre; //temps entre deux ticks
+
 //variables interrupts
-
-
+volatile unsigned long dernier_tick_pluviometre = 0;
 volatile unsigned long temps_anemometre_interrupt[2] = {0,0};
 volatile boolean interrupt_anemometre = 0;
-
 volatile unsigned long temps_pluviometre_interrupt[2] = {0,0};
 volatile boolean interrupt_pluviometre = 0;
 
@@ -94,7 +95,7 @@ void fonction_interrupt_anemometre(){
 
 
 void fonction_interrupt_pluviometre(){
-  temps_pluviometre_interrupt[interrupt_pluviometre] = millis();
+  dernier_tick_pluviometre,temps_pluviometre_interrupt[interrupt_pluviometre] = millis();
   interrupt_pluviometre = !interrupt_pluviometre;
 }
 
@@ -153,12 +154,14 @@ void loop() {
   //mesure la vitesse du vent
 
   if ((temps_anemometre_interrupt[interrupt_anemometre]-temps_anemometre_interrupt[interrupt_anemometre+1])<1000) {
-    vitesse = (rayon * (2 * M_PI * (1 / (vitesse*4) / 1000000))) * 3.6; // tout dans la même ligne
+    vitesse = (rayon * (2 * M_PI * (1 / (temps_anemometre_interrupt[interrupt_anemometre] - temps_anemometre_interrupt[interrupt_anemometre + 1]) / 1000000))) * 3.6;
   }
   else {
     vitesse = 0;
     direction_vent = 16;
   }
+
+
 
 
 
@@ -195,6 +198,11 @@ void loop() {
   }
 
   dernier_etat_boutton = etat_boutton;
+
+  temps_pluviometre = temps_pluviometre_interrupt[interrupt_pluviometre]-temps_pluviometre_interrupt[interrupt_pluviometre+1];
+  if((dernier_tick_pluviometre+60000) > millis()){
+    temps_pluviometre = 0;
+  }
 
   lcd.setCursor(0,1);
   lcd.print("                ");
