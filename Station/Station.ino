@@ -32,11 +32,12 @@ Broche 16 ↑
 #define lcd_d5 9
 #define lcd_d6 8
 #define lcd_d7 7
+// l'autre broche des composants ci dessous est relié à la masse.
 #define pin_bouton 6
 #define pin_anemometre 2
 #define pin_pluviometre 3
-#define pin_girouette A0
-
+#define pin_girouette                                                          \
+  A0 // relié à une restistance de tirage au 5v de 10 kilo ohms
 
 //Definition des contantes
 #define rayon  0.07       //rayon tiges anémomètre en mètres
@@ -59,15 +60,14 @@ const String tableau_direction_vent[] = {
 LiquidCrystal lcd(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
 Si115X si1151; //Capteur lumière I2C
 
-
-//Variables
+// Déclaration des variables
 
 //Menu
 byte menu = 0; //Quel écran à afficher sur le LCD
 
 //Capteur lumière
-word ultraviolet;
-word visible;
+byte ultraviolet;
+unsigned long visible;
 
 // Le bouton
 boolean etat_bouton = 0;
@@ -102,23 +102,28 @@ volatile boolean index_tableau_pluviometre = 0; // index tableau pluviomètre
 //Code interrupts
 
 void interrupt_anemometre() {
+  // stocke dans le tableau les millisecondes écoulées au moment ou l'anémometre
+  // effectue un quart de tour
   tableau_temps_anemometre[index_tableau_anemometre] = millis();
-  index_tableau_anemometre = !index_tableau_anemometre; // change l'index
+  index_tableau_anemometre =
+      !index_tableau_anemometre; // Change l'index du tableau
 }
 
 void interrupt_pluviometre() {
+  // stocke dans le tableau les millisecondes écoulées au moment ou y'a de l'eau
+  // dans le pluviomètre, je sais pas exactement ce qui le déclanche
   tableau_temps_pluviometre[index_tableau_pluviometre] = millis();
   dernier_tick_pluviometre =
       tableau_temps_pluviometre[index_tableau_pluviometre];
-  index_tableau_pluviometre = !index_tableau_pluviometre; // change l'index
+  index_tableau_pluviometre =
+      !index_tableau_pluviometre; // Change l'index du tableau
 }
 
-//code principal
-
+// Code de démarrage
 void setup() {
   pinMode(pin_anemometre,INPUT_PULLUP);
   pinMode(pin_pluviometre,INPUT_PULLUP);
-  pinMode(pin_girouette,0);
+  pinMode(pin_girouette, 0); // input
 
   pinMode(pin_bouton, INPUT_PULLUP);
 
@@ -137,40 +142,23 @@ void setup() {
 
 }
 
+// Boucle principale
 void loop() {
+
+  // Lis la lumière et l'ultraviolet
+  ultraviolet = si1151.ReadHalfWord_UV();
+  visible = map(si1151.ReadHalfWord(), 0, 65535, 0, 128000);
 
   // Lis le bouton
   dernier_etat_bouton = etat_bouton;
   lecture_bouton = !digitalRead(pin_bouton);
+  // Quand le bouton est pressé, la valeur lue est 0 d'ou la nécesité d'inverser
+  // la valeur lue pour refleter la valeur du bouton
 
-  if (etat_bouton != dernier_etat_lu_bouton) {
-    dernier_debounce_delay = millis();
-  }
-
-  if((millis() - dernier_debounce_delay) > debounce_delay){
-    etat_bouton = lecture_bouton;
-  }
-
-  dernier_etat_lu_bouton = lecture_bouton;
-
-  //Lis la lumière et l'ultraviolet
-  ultraviolet = si1151.ReadHalfWord_UV();
-  visible = si1151.ReadHalfWord();
-
-
-  //Calcul l'index du tableau des points cardinaux par rapport à la direction du vent
+  // lis la valeur de la girouette
   valeur_lu_girouette = analogRead(pin_girouette);
-  for (byte a = 0; a != 16; a++) {
-    if ((valeur_lu_girouette >= tableau_valeurs_girouette[a] - tolerance) &&
-        (valeur_lu_girouette < tableau_valeurs_girouette[a] + tolerance)) {
-      index_tableau_direction_vent = a;
-      break;
-    }
-  }
-
 
   //Mesure la vitesse du vent
-
   if ((tableau_temps_anemometre[index_tableau_anemometre] -
        tableau_temps_anemometre[index_tableau_anemometre + 1]) < 1000) {
     vitesse =
@@ -182,6 +170,8 @@ void loop() {
         3.6;
   }
   else {
+    // si en une seconde, l'anémomètre n'a pas fait un quart de tour, on
+    // considère qu'il n'y a pas de vent
     vitesse = 0;
   }
 
@@ -195,6 +185,25 @@ void loop() {
   else {
     temps_pluviometre = 0;
   }
+
+  // Calcul l'index du tableau des points cardinaux par rapport à la direction
+  // du vent
+  for (byte a = 0; a != 16; a++) {
+    if ((valeur_lu_girouette >= tableau_valeurs_girouette[a] - tolerance) &&
+        (valeur_lu_girouette < tableau_valeurs_girouette[a] + tolerance)) {
+      index_tableau_direction_vent = a;
+      break;
+    }
+  }
+
+  // debounce bouton
+  if (etat_bouton != dernier_etat_lu_bouton) {
+    dernier_debounce_delay = millis();
+  }
+  if ((millis() - dernier_debounce_delay) > debounce_delay) {
+    etat_bouton = lecture_bouton;
+  }
+  dernier_etat_lu_bouton = lecture_bouton;
 
   //Regarde si on doit changer d'écran
   if (etat_bouton && !dernier_etat_bouton) {
@@ -289,12 +298,13 @@ void loop() {
     break;
   }
 
-  //maquette écran
+  // Maquettes écran
 
   //Vent
   //0123456789ABCDEF
   //Vent:Pas de vent
-  //Vent: 99.99 km/h
+  //    Vent: 10.42 km/h
+  //    Vent: 5.89  km/h
   //Ouest Nord Ouest
   //0123456789ABCDEF
 
@@ -309,6 +319,7 @@ void loop() {
   //0123456789ABCDEF
   //    Lumiere:
   //   999999 lux
+  //       120 lux
   //0123456789ABCDEF
 
   //Ultraviolet
@@ -321,4 +332,9 @@ void loop() {
   //     Normal
   //0123456789ABCDEF
 
+  // Capteur lumière pas prêt
+  // 0123456789ABCDEF
+  // Capteur lumiere
+  //     pas pret
+  // 0123456789ABCDEF
 }
