@@ -2,21 +2,21 @@
 Broche 1 ↓
 
 GND
-    5v
-    Potentiomètre (contraste)
-        12
-    GND
-    11
-    NC
-    NC
-    NC
-    NC
-    10
-    9
-    8
-    7
-    5V (avec résistance 220 ohms pour le retro éclairage)
-        GND
+5v
+Potentiomètre (contraste)
+12
+GND
+11
+NC
+NC
+NC
+NC
+10
+9
+8
+7
+5V (avec résistance 220 ohms pour le retro éclairage)
+GND
 
     Broche 16 ↑
         */
@@ -90,7 +90,6 @@ volatile unsigned long temps_anemometre_interrupt[2] = {0,0};
 volatile boolean interrupt_anemometre = 0;                     //index tableau pluviomètre
 volatile unsigned long temps_pluviometre_interrupt[2] = {0,0};
 volatile boolean interrupt_pluviometre = 0;                    //index tableau pluviomètre
-
 
 //Code interrupts
 
