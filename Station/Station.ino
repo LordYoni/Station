@@ -1,26 +1,32 @@
+/* brochage LCD par rapport à l'Arduino
+Broche 1 ↓
+
+GND
+    5v
+    Potentiomètre (contraste)
+        12
+    GND
+    11
+    NC
+    NC
+    NC
+    NC
+    10
+    9
+    8
+    7
+    5V (avec résistance 220 ohms pour le retro éclairage)
+        GND
+
+    Broche 16 ↑
+        */
+
+
 #include <LiquidCrystal.h>
 #include <Si115X.h>
 
-/* pinout LCD
-GND 1
-5v
-pot
-12
-GND
-11
-nc
-nc
-nc
-nc
-10
-9
-8
-7
-5V (resistance pour retro éclairage)
-GND 16
-*/
 
-//definition des pins
+//Definition nom des broches
 #define lcd_rs 12
 #define lcd_en 11
 #define lcd_d4 10
@@ -32,72 +38,72 @@ GND 16
 #define pin_pluviometre 3
 #define pin_girouette A0
 
-//definition des contantes
-#define rayon  0.07 //rayon tige anemometre
-#define tolerance 9
+
+//Definition des contantes
+#define rayon  0.07       //rayon tiges anémomètre en mètres
+#define tolerance 9       //écart max par rapport aux valeurs tension girouette
 #define debounce_delay 50 //en ms
 
-//valeurs théoriques {785,405,460,83,93,65,182,126,287,244,629,598,944,826,886,702}
-const word tension_girouette[] = {785,405,460,83,93,65,182,126,287,244,629,598,944,826,886,702}; //à étalonner
+
+    //Valeurs théoriques: {785,405,460,83,93,65,182,126,287,244,629,598,944,826,886,702}
+    const word tension_girouette[] = {785,405,460,83,93,65,182,126,287,244,629,598,944,826,886,702}; //à étalonner
 
 const String points_cardinaux[] = {"Nord","Nord Nord Est","Nord Est","Est Nord Est","Est","Est Sud Est","Sud Est",
                                    "Sud Sud Est","Sud","Sud Sud Ouest","Sud Ouest","Ouest Sud Ouest","Ouest",
-                                   "Ouest Nord Ouest","Nord Ouest","Nord Nord Est"," "};
+                                   "Ouest Nord Ouest","Nord Ouest","Nord Nord Est"};
 
-//declaration des capteurs
+
+//declaration des composants
 LiquidCrystal lcd(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
-Si115X si1151; //I2C capteur lumière
+Si115X si1151; //Capteur lumière I2C
 
 
-//variables
+//Variables
 
-//menu
-byte menu = 0; //quel truc à afficher sur le LCD
+//Menu
+byte menu = 0; //Quel écran à afficher sur le LCD
 
-
-//capteur lumière
+//Capteur lumière
 word ultraviolet;
 word visible;
-//word infrarouge;
 
-//le boutton
+//Le boutton
 boolean etat_boutton = 0;
-boolean dernier_etat_boutton = 0;
+boolean dernier_etat_boutton;
 boolean dernier_etat_lu_boutton = 0;
-boolean lecture_boutton = 0;
+boolean lecture_boutton;
 unsigned long dernier_debounce_delay = 0;
 
-//anemometre
-float vitesse; //vitesse du vent en km/h
-//float vitesse_angulaire;
+//Anémomètre
+float vitesse; //Vitesse du vent en km/h
 
-//girouette
-byte direction_vent; //index dans le tableaux des points cardinaux
-word valeur_tension; //tension lue de girouette
+//Girouette
+byte direction_vent; //Index dans le tableaux des points cardinaux
+word valeur_tension; //Tension lue girouette
 
-//capteur pluie
+//Pluviomètre
 unsigned long temps_pluviometre; //temps entre deux ticks
 
-//variables interrupts
-volatile unsigned long dernier_tick_pluviometre = 0;
+//Variables interrupts
+volatile unsigned long dernier_tick_pluviometre = 0;           //millisecondes du dernier tick
 volatile unsigned long temps_anemometre_interrupt[2] = {0,0};
-volatile boolean interrupt_anemometre = 0;
+volatile boolean interrupt_anemometre = 0;                     //index tableau pluviomètre
 volatile unsigned long temps_pluviometre_interrupt[2] = {0,0};
-volatile boolean interrupt_pluviometre = 0;
+volatile boolean interrupt_pluviometre = 0;                    //index tableau pluviomètre
 
 
-//code interrupts
+//Code interrupts
 
 void fonction_interrupt_anemometre(){
   temps_anemometre_interrupt[interrupt_anemometre] = millis();
-  interrupt_anemometre = !interrupt_anemometre;
+  interrupt_anemometre = !interrupt_anemometre; //change l'index
 }
 
 
 void fonction_interrupt_pluviometre(){
   temps_pluviometre_interrupt[interrupt_pluviometre] = millis();
   dernier_tick_pluviometre = temps_pluviometre_interrupt[interrupt_pluviometre];
-  interrupt_pluviometre = !interrupt_pluviometre;
+  interrupt_pluviometre = !interrupt_pluviometre; //change l'index
 }
 
 //code principal
@@ -109,40 +115,42 @@ void setup() {
 
   pinMode(pin_boutton,INPUT_PULLUP);
 
-  attachInterrupt(digitalPinToInterrupt(pin_anemometre),fonction_interrupt_anemometre,CHANGE);
-  attachInterrupt(digitalPinToInterrupt(pin_pluviometre),fonction_interrupt_pluviometre,CHANGE);
+  attachInterrupt(digitalPinToInterrupt(pin_anemometre),fonction_interrupt_anemometre,CHANGE);   //interruption anémomètre
+  attachInterrupt(digitalPinToInterrupt(pin_pluviometre),fonction_interrupt_pluviometre,CHANGE); //interruption pluviomètre
 
-
-  Wire.begin();
+  Wire.begin(); //démarre la communication I2C
   lcd.begin(16, 2);
   lcd.print("Capteur lumiere");
   lcd.setCursor(4, 1);
   lcd.print("pas pret");
-  while (!si1151.Begin()){}
+  while (!si1151.Begin()){} //attends que le capteur de lumière soit prêt
   lcd.clear();
 
 }
 
 void loop() {
 
-  //lire le boutton
+  //Lis le boutton
+  dernier_etat_boutton = etat_boutton;
   lecture_boutton = !digitalRead(pin_boutton);
+
   if(etat_boutton != dernier_etat_lu_boutton){
     dernier_debounce_delay = millis();
   }
+
   if((millis() - dernier_debounce_delay) > debounce_delay){
     etat_boutton = lecture_boutton;
   }
+
   dernier_etat_lu_boutton = lecture_boutton;
 
 
-  //lire la lumière et l'ultraviolet
+  //Lis la lumière et l'ultraviolet
   ultraviolet = si1151.ReadHalfWord_UV();
   visible = si1151.ReadHalfWord();
-  //infrarouge = si1151.ReadHalfWord_VISIBLE();
 
 
-  //calcul l'index du tableau des points cardinaux par rapport à la direction du vent
+  //Calcul l'index du tableau des points cardinaux par rapport à la direction du vent
   valeur_tension = analogRead(pin_girouette);
   for (byte a = 0; a != 16; a++) {
     if ((valeur_tension >= tension_girouette[a] - tolerance) && (valeur_tension < tension_girouette[a] + tolerance)) {
@@ -152,21 +160,25 @@ void loop() {
   }
 
 
-  //mesure la vitesse du vent
+  //Mesure la vitesse du vent
 
   if ((temps_anemometre_interrupt[interrupt_anemometre]-temps_anemometre_interrupt[interrupt_anemometre+1])<1000) {
     vitesse = (rayon * (2 * M_PI * (1 / (temps_anemometre_interrupt[interrupt_anemometre] - temps_anemometre_interrupt[interrupt_anemometre + 1]) / 1000000))) * 3.6;
   }
   else {
     vitesse = 0;
-    direction_vent = 16;
+  }
+
+  //mesure le temps pour la pluie
+  if((dernier_tick_pluviometre+60000) > millis()){ //timeout après une minute sans retour du pluviomètre
+    temps_pluviometre = 0;
+  }
+  else {
+    temps_pluviometre = temps_pluviometre_interrupt[interrupt_pluviometre] - temps_pluviometre_interrupt[interrupt_pluviometre + 1];
   }
 
 
-
-
-
-  //regarde si on doit changer d'écran
+  //Regarde si on doit changer d'écran
   if(etat_boutton != dernier_etat_boutton){
     menu = (menu++)%4;
 
@@ -181,7 +193,7 @@ void loop() {
     case 1: //pluie
 
       lcd.setCursor(5,0);
-      lcd.print("Pluie;");
+      lcd.print("Pluie:");
       break;
 
     case 2: //lumière
@@ -192,20 +204,11 @@ void loop() {
 
     default: //indice ultraviolet
 
-      lcd.setCursor(7,0);
-      lcd.print("ultraviolet;");
+      lcd.print("Ind. Ultraviolet");
       break;
     }
   }
 
-  dernier_etat_boutton = etat_boutton;
-
-  if((dernier_tick_pluviometre+60000) > millis()){
-    temps_pluviometre = 0;
-  }
-  else {
-    temps_pluviometre = temps_pluviometre_interrupt[interrupt_pluviometre] - temps_pluviometre_interrupt[interrupt_pluviometre + 1];
-  }
 
   lcd.setCursor(0,1);
   lcd.print("                ");
@@ -230,9 +233,16 @@ void loop() {
     break;
 
   case 1: //pluie
-    lcd.setCursor(4,1);
-    lcd.print((3600000/temps_pluviometre)*0.2794);
-    lcd.print ("mm/m2");
+
+    if(!temps_pluviometre){
+      lcd.setCursor(2,1);
+      lcd.print("Pas de pluie");
+    }
+    else{
+      lcd.setCursor(4,1);
+      lcd.print((3600000/temps_pluviometre)*0.2794);
+      lcd.print (" mm/m2");
+    }
     break;
 
   case 2: //lumière
@@ -242,50 +252,55 @@ void loop() {
     break;
 
   default: //indice ultraviolet
-    lcd.setCursor(3,1);
+    lcd.setCursor(0,1);
     if (ultraviolet >= 11) {
-      lcd.print("Extrême");
+      lcd.print("    Extreme");
     }
     else if(ultraviolet< 11 && ultraviolet >= 8) {
-      lcd.print("Très haut");
+      lcd.print("   Tres haut");
     }
     else if(ultraviolet  < 8 && ultraviolet  >= 6) {
-      lcd.print("Haut");
+      lcd.print("      Haut");
     }
     else if(ultraviolet  < 6 && ultraviolet >= 3) {
-      lcd.print("Modéré");
+      lcd.print("     Modere");
     }
     else {
-      lcd.print("Normal");
+      lcd.print("     Normal");
     }
     break;
   }
 
   //maquette écran
 
-  //maquette vent
+  //Vent
   //0123456789ABCDEF
   //Vent:Pas de vent
   //Vent: 99.99 km/h
   //Ouest Nord Ouest
   //0123456789ABCDEF
 
-  //maquette pluie
+  //Pluie
   //0123456789ABCDEF
   //     Pluie:
-  //    10 mm/m²
+  //    10 mm/m2
+  //  Pas de pluie
   //0123456789ABCDEF
 
-  //maquette lumière
+  //Lumière
   //0123456789ABCDEF
   //    Lumiere:
   //   999999 lux
   //0123456789ABCDEF
 
-  //maquette ultraviolet
+  //Ultraviolet
   //0123456789ABCDEF
-  //      ultraviolet:
+  //Ind. Ultraviolet
+  //    Extreme
   //   Tres haut
+  //      Haut
+  //     Modere
+  //     Normal
   //0123456789ABCDEF
 
 }
