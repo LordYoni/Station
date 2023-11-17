@@ -12,7 +12,7 @@ GND
     NC
     NC
     10
-    9
+    9.
     8
     7
     5V (avec résistance 220 ohms pour le retro éclairage)
