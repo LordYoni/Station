@@ -86,25 +86,21 @@ unsigned long temps_pluviometre; //temps entre deux ticks
 
 //Variables interrupts
 volatile unsigned long dernier_tick_pluviometre = 0; // millisecondes écoulées au dernier tick du pluviomètre
-volatile unsigned long tableau_temps_anemometre[2] = {0, 0}; // tableau qui répertorie les millisecondes écoulées depuis chaques
-           // interrupts de l'anémomètre
+volatile unsigned long tableau_temps_anemometre[2] = {0, 0}; // tableau qui répertorie les millisecondes écoulées depuis chaques interrupts de l'anémomètre
 volatile boolean index_tableau_anemometre = 0; // index tableau pluviomètre
-volatile unsigned long tableau_temps_pluviometre[2] = {0, 0}; // tableau qui répertorie les millisecondes écoulées depuis chaques
-           // interrupts du pluviomètre
+volatile unsigned long tableau_temps_pluviometre[2] = {0, 0}; // tableau qui répertorie les millisecondes écoulées depuis chaques interrupts du pluviomètre
 volatile boolean index_tableau_pluviometre = 0; // index tableau pluviomètre
 
 //Code interrupts
 
 void interrupt_anemometre() {
-  // stocke dans le tableau les millisecondes écoulées au moment ou l'anémometre
-  // effectue un quart de tour
+  // stocke dans le tableau les millisecondes écoulées au moment ou l'anémometre effectue un quart de tour
   tableau_temps_anemometre[index_tableau_anemometre] = millis();
   index_tableau_anemometre = !index_tableau_anemometre; // Change l'index du tableau
 }
 
 void interrupt_pluviometre() {
-  // stocke dans le tableau les millisecondes écoulées au moment ou y'a de l'eau
-  // dans le pluviomètre, je sais pas exactement ce qui le déclanche
+  // stocke dans le tableau les millisecondes écoulées au moment ou y'a de l'eau dans le pluviomètre, je sais pas exactement ce qui le déclanche
   tableau_temps_pluviometre[index_tableau_pluviometre] = millis();
   dernier_tick_pluviometre = tableau_temps_pluviometre[index_tableau_pluviometre];
   index_tableau_pluviometre = !index_tableau_pluviometre; // Change l'index du tableau
@@ -141,8 +137,7 @@ void loop() {
   // Lis le bouton
   dernier_etat_bouton = etat_bouton;
   lecture_bouton = !digitalRead(pin_bouton);
-  // Quand le bouton est pressé, la valeur lue est 0 d'ou la nécesité d'inverser
-  // la valeur lue pour refleter la valeur du bouton
+  // Quand le bouton est pressé, la valeur lue est 0 d'ou la nécesité d'inverser la valeur lue pour refleter la valeur du bouton
 
   // lis la valeur de la girouette
   valeur_lu_girouette = analogRead(pin_girouette);
@@ -152,8 +147,7 @@ void loop() {
     vitesse = (rayon * (2 * M_PI *(1 /(tableau_temps_anemometre[index_tableau_anemometre] -tableau_temps_anemometre[index_tableau_anemometre + 1]) /1000000))) * 3.6;
   }
   else {
-    // si en une seconde, l'anémomètre n'a pas fait un quart de tour, on
-    // considère qu'il n'y a pas de vent
+    // si en une seconde, l'anémomètre n'a pas fait un quart de tour, on considère qu'il n'y a pas de vent
     vitesse = 0;
   }
 
@@ -165,8 +159,7 @@ void loop() {
     temps_pluviometre = 0;
   }
 
-  // Calcul l'index du tableau des points cardinaux par rapport à la direction
-  // du vent
+  // Calcul l'index du tableau des points cardinaux par rapport à la direction du vent
   for (byte a = 0; a != 16; a++) {
     if ((valeur_lu_girouette >= tableau_valeurs_girouette[a] - tolerance) &&
         (valeur_lu_girouette < tableau_valeurs_girouette[a] + tolerance)) {
@@ -282,8 +275,8 @@ void loop() {
   //Vent
   //0123456789ABCDEF
   //Vent:Pas de vent
-  //    Vent: 10.42 km/h
-  //    Vent: 5.89  km/h
+  //Vent: 10.42 km/h
+  //Vent: 5.89  km/h
   //Ouest Nord Ouest
   //0123456789ABCDEF
 
@@ -298,7 +291,7 @@ void loop() {
   //0123456789ABCDEF
   //    Lumiere:
   //   999999 lux
-  //       120 lux
+  //   120 lux
   //0123456789ABCDEF
 
   //Ultraviolet
