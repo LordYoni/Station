@@ -144,7 +144,6 @@ void loop() {
 
   dernier_etat_lu_boutton = lecture_boutton;
 
-
   //Lis la lumière et l'ultraviolet
   ultraviolet = si1151.ReadHalfWord_UV();
   visible = si1151.ReadHalfWord();
