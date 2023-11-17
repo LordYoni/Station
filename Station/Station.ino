@@ -9,7 +9,7 @@ GND
 11
 NC
 NC
-NCy
+NC
 NC
 10
 9
