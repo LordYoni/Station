@@ -88,10 +88,15 @@ word valeur_lu_girouette;          // Tension lue girouette
 unsigned long temps_pluviometre; //temps entre deux ticks
 
 //Variables interrupts
-volatile unsigned long dernier_tick_pluviometre = 0;           //millisecondes du dernier tick
-volatile unsigned long tableau_temps_anemometre[2] = {0, 0};
+volatile unsigned long dernier_tick_pluviometre =
+    0; // millisecondes écoulées au dernier tick du pluviomètre
+volatile unsigned long tableau_temps_anemometre[2] = {
+    0, 0}; // tableau qui répertorie les millisecondes écoulées depuis chaques
+           // interrupts de l'anémomètre
 volatile boolean index_tableau_anemometre = 0; // index tableau pluviomètre
-volatile unsigned long tableau_temps_pluviometre[2] = {0, 0};
+volatile unsigned long tableau_temps_pluviometre[2] = {
+    0, 0}; // tableau qui répertorie les millisecondes écoulées depuis chaques
+           // interrupts du pluviomètre
 volatile boolean index_tableau_pluviometre = 0; // index tableau pluviomètre
 
 //Code interrupts
@@ -190,7 +195,6 @@ void loop() {
   else {
     temps_pluviometre = 0;
   }
-
 
   //Regarde si on doit changer d'écran
   if (etat_bouton && !dernier_etat_bouton) {
