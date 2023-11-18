@@ -1,8 +1,25 @@
-/* Analyseur de conditions météo ????
- *
+// A faire
+
+//Est ce qu'il ne faudrait pas débouncer la pluie ???
+//Détailler le calcul de la pluie
+//Détailler le calcul de la lumière
+//changer l'affichage quand il n'y a pas de vent par:
+
+//0123456789ABCDEF
+//Vent:  ---  km/h
+//  Pas de Vent
+//0123456789ABCDEF
+
+//pour réduire le clignotement de "km/h"
+
+//--------------------------------------------------------------
+
+/* Station météo (c'est pas vraiment une station météo, si ? Y'a pas de capteur de temperature et pour l'humidité,
+ * on sais juste s'il pleut ou pas.
  *
  * Ecran LCD 16*2
- * (potentiomètre)
+ * (Potentiomètre)
+ * (Résistance 10 kilo ohms)
  * Bouton poussoir
  * Anémomètre
  * Girouette
@@ -16,7 +33,6 @@
  * Fiche technique:
  * https://cdn.sparkfun.com/assets/d/1/e/0/6/DS-15901-Weather_Meter.pdf
  */
-
 
 /* Brochage LCD par rapport à l'Arduino
 Broche 1 ↓
@@ -67,12 +83,10 @@ const byte debounce_delay = 50; //en ms
 //précalcule "rayon * 2 * pi * km/h" pour le calcul de la vitesse du vent
 const float pre_calcul_vitesse_vent = (rayon/100) * 2 * M_PI * 3.6;
 //rayon est donné en centimètres, on le divise par 100 pour l'obtenir en mètres
-//La multiplication par 3.6 permet de convertir la valeur en m/s en km/h.
-
+//La multiplication par 3.6 permet de convertir la valeur de m/s à km/h.
 
 
 //Définition de toutes les valeures possibles lors de la lecture de la valeur de la girouette
-
 /*
  * La girouette donne la direction du vent grace à la valeur de la résistance entre ses deux broches de sortie.
  * Pour connaitre cette direction, il faut transformer la valeur de la résistance en une valeur de tension afin
@@ -117,7 +131,12 @@ Si115X si1151;
 //Déclaration des variables
 
 //Menu
-byte menu = 0; //Quel écran à afficher sur le LCD
+byte menu = 0;
+//Définit l'écran à afficher
+//0 = Vent
+//1 = Pluie
+//2 = Lumière
+//3 = Indice UV
 
 //Variables capteur lumière/UV
 byte ultraviolet;
@@ -128,7 +147,7 @@ boolean etat_bouton = 0;                  //état du bouton après débouncage
 boolean dernier_etat_bouton;              //le dernier état du bouton
 boolean etat_lu_bouton;                   //état du bouton lu
 boolean dernier_etat_lu_bouton = 0;       //dernier etat du bouton lu
-unsigned long dernier_debounce_delay = 0; //est égal au nombre de millisecondes écoulées lors ce que la valeur lue change d'état
+unsigned long dernier_debounce_delay = 0; //est égal au nombre de millisecondes écoulées lorsque la valeur du bouton lue change d'état
 
 //Anémomètre
 float vitesse; //Vitesse du vent en km/h
@@ -142,20 +161,20 @@ unsigned long temps_pluviometre; //temps entre deux ticks
 
 //Variables interrupts
 volatile unsigned long tableau_temps_anemometre[2] = {1000,0}; // tableau qui répertorie les millisecondes écoulées lors de chaques interrupts de l'anémomètre
-volatile boolean index_tableau_anemometre = 0;                 // index tableau pluviomètre
+volatile boolean index_tableau_anemometre = 0;                 // index tableau anémomètre
 volatile unsigned long tableau_temps_pluviometre[2] = {0, 0};  // tableau qui répertorie les millisecondes écoulées lors de chaques interrupts du pluviomètre
 volatile boolean index_tableau_pluviometre = 0;                // index tableau pluviomètre
 
 //Code interrupts
 
-//Est éxecuté au moment ou l'anémometre effectue un quart de tour
+//Est éxecuté au moment ou l'anémometre effectue un quart de tour (d'après nos tests, oui, mais pas selon la fiche technique)
 void interrupt_anemometre() {
     // stocke dans le tableau les millisecondes écoulées
     tableau_temps_anemometre[index_tableau_anemometre] = millis();
     index_tableau_anemometre = !index_tableau_anemometre; // Change l'index du tableau
 }
 
-//Est éxecuté au moment ou y'a de l'eau dans le pluviomètre, je sais pas exactement ce qui le déclanche
+//Est éxecuté à chaque 0.2794mm de pluie.
 void interrupt_pluviometre() {
     // stocke dans le tableau les millisecondes écoulées
     tableau_temps_pluviometre[index_tableau_pluviometre] = millis();
@@ -191,7 +210,7 @@ void loop() {
     ultraviolet = si1151.ReadHalfWord_UV();
     visible = si1151.ReadHalfWord();
 
-    // Lis le bouton
+    // Lis l'état du bouton
     dernier_etat_bouton = etat_bouton;
     etat_lu_bouton = !digitalRead(pin_bouton);
     // Quand le bouton est pressé, la valeur lue est 0 d'ou la nécesité d'inverser la valeur lue pour refleter la valeur du bouton
@@ -235,42 +254,63 @@ void loop() {
          * et on obtiens la vitesse du vent en km/h.
          */
 
+        /* Selon la fiche de l'anémomètre, s'il y a un contact par seconde entre les deux broches, le vent soufle à 2.4km/h
+         *
+         * Donc en théorie, il faut faire la difference des millisecondes écoulées entre deux front déscendants (falling edge),
+         *
+         * diviser par 1000 pour l'avoir en seconde, l'inverser pour avoir le nombre de tours/seconde
+         * et multiplier par 2.4 pour avoir la vitesse de vent en km/h.
+         *
+         * Notre calcul ne respecte pas cette méthode car nos tests indiquent que l'anémomètre change d'état tout les
+         * quarts de tour. On se sert du temps pris pour faire un quart de tour pour calculer la vitesse du vent à la palce.
+         *
+         */
+
     }
     else {
         //pas de vent
         vitesse = 0;
     }
 
-    //debounce la pluie ???
     //mesure le temps pour la pluie
     if ((tableau_temps_pluviometre[index_tableau_pluviometre + 1 ] + 60000) < millis()) {
-        temps_pluviometre = tableau_temps_pluviometre[index_tableau_pluviometre] - tableau_temps_pluviometre[index_tableau_pluviometre + 1];
+
+        temps_pluviometre = (3600000/(tableau_temps_pluviometre[index_tableau_pluviometre] - tableau_temps_pluviometre[index_tableau_pluviometre + 1]))*0.2794;
     }
     else {
         //aucune nouvelle donnée du pluviomètre au bout d'une minute, on considère qu'il ne pleut pas
         temps_pluviometre = 0;
     }
 
-    // Calcul l'index du tableau des points cardinaux par rapport à la direction du vent
+    // Cherche l'index du tableau des direction du vent par rapport à la valeur de la tension lue de la girouette
     for (byte a = 0; a != 16; a++) {
         if ((valeur_lu_girouette >= tableau_valeurs_girouette[a] - tolerance) && (valeur_lu_girouette < tableau_valeurs_girouette[a] + tolerance)) {
-            //si
             index_tableau_direction_vent = a;
             break;
         }
     }
+    //S'il n'y a pas de vent, la valeur sera lue de la girouette sera égale à 0 et l'index dans le tableau ne changera pas
+    //mais ne seras pas utilisé pour afficher de direction
 
     //Debounce bouton
     if (etat_lu_bouton != dernier_etat_lu_bouton) {
+        //met la variable au nombre de millisecondes écoulées lorsque la valeur lue du bouton change d'état
         dernier_debounce_delay = millis();
     }
+
     if ((millis() - dernier_debounce_delay) > debounce_delay) {
+        //si la valeur lu du bouton n'a pas changé pendant (constante) ms, on considère que l'état du bouton
+        //est stabilisé, on peut utliliser sa valeur lu pour changer d'écran ou pas.
         etat_bouton = etat_lu_bouton;
     }
     dernier_etat_lu_bouton = etat_bouton;
 
     //Regarde si on doit changer d'écran
     if (etat_bouton && !dernier_etat_bouton) {
+        //si le bouton viens d'être pressé
+        //on change d'écran
+
+        //va à l'écran suivant et rollback à 4
         menu = (menu++)%4;
 
         lcd.clear();
@@ -302,7 +342,7 @@ void loop() {
 
 
     lcd.setCursor(0,1);
-    lcd.print("                ");
+    lcd.print("                "); //efface la deuxième ligne
 
     //affiche les valeurs à l'écran
     switch (menu){
@@ -331,8 +371,8 @@ void loop() {
             }
             else{
                 lcd.setCursor(4,1);
-                lcd.print((3600000/temps_pluviometre)*0.2794);
-                lcd.print (" mm/m2");
+                lcd.print(temps_pluviometre);
+                lcd.print (" mm/m2"); //millimètres par mètre carré par heure
             }
             break;
 
