@@ -10,7 +10,7 @@
 //  Pas de Vent
 //0123456789ABCDEF
 
-//pour réduire le clignotement de "km/h"
+//pour réduire le clignotement de "km/h" ?
 
 //--------------------------------------------------------------
 
@@ -77,7 +77,7 @@ const byte pin_pluviometre = 3;
 const byte pin_girouette = A0;  //Relié à une restistance de tirage vers 5v de 10 kilo ohms
 
 //Définition des contantes
-const byte rayon = 6;           //rayon tiges anémomètre en centimètres
+const byte rayon = 7;           //rayon tiges anémomètre en centimètres
 const byte tolerance = 9;       //écart max par rapport aux valeurs tension girouette
 const byte debounce_delay = 50; //en ms
 //précalcule "rayon * 2 * pi * km/h" pour le calcul de la vitesse du vent
