@@ -3,19 +3,12 @@
 //Est ce qu'il ne faudrait pas débouncer la pluie ???
 //Détailler le calcul de la pluie
 //Détailler le calcul de la lumière
-//changer l'affichage quand il n'y a pas de vent par:
-
-//0123456789ABCDEF
-//Vent:  ---  km/h
-//  Pas de Vent
-//0123456789ABCDEF
-
-//pour réduire le clignotement de "km/h" ?
+//aérer le code ?
 
 //--------------------------------------------------------------
 
 /* Station météo (c'est pas vraiment une station météo, si ? Y'a pas de capteur de temperature et pour l'humidité,
- * on sais juste s'il pleut ou pas.
+ * on sais juste s'il pleut ou pas.)
  *
  * Ecran LCD 16*2
  * (Potentiomètre)
@@ -137,6 +130,7 @@ byte menu = 0;
 //1 = Pluie
 //2 = Lumière
 //3 = Indice UV
+//4 = étalonnage
 
 //Variables capteur lumière/UV
 byte ultraviolet;
@@ -145,19 +139,19 @@ unsigned long visible;
 //Variables bouton
 boolean etat_bouton = 0;                  //état du bouton après débouncage
 boolean dernier_etat_bouton;              //le dernier état du bouton
-boolean etat_lu_bouton;                   //état du bouton lu
-boolean dernier_etat_lu_bouton = 0;       //dernier etat du bouton lu
-unsigned long dernier_debounce_delay = 0; //est égal au nombre de millisecondes écoulées lorsque la valeur du bouton lue change d'état
+boolean etat_lu_bouton;                   //état lu du bouton
+boolean dernier_etat_lu_bouton = 0;       //dernier etat lu du bouton
+unsigned long dernier_debounce_delay = 0; //est égal au nombre de millisecondes écoulées lorsque la valeur lue du bouton change d'état
 
 //Anémomètre
-float vitesse; //Vitesse du vent en km/h
+float vitesse_vent; //Vitesse du vent en km/h
 
 //Girouette
 byte index_tableau_direction_vent; //Index dans le tableaux de la direction du vent
 word valeur_lu_girouette;          //Valeur lue de la girouette
 
 //Pluviomètre
-unsigned long temps_pluviometre; //temps entre deux ticks
+unsigned long valeur_pluie;        //valeur de pluie
 
 //Variables interrupts
 volatile unsigned long tableau_temps_anemometre[2] = {1000,0}; // tableau qui répertorie les millisecondes écoulées lors de chaques interrupts de l'anémomètre
@@ -186,8 +180,8 @@ void setup() {
     //délclare les broches comme devant être tiré au 5v par l'Arduino
     pinMode(pin_anemometre,INPUT_PULLUP);
     pinMode(pin_bouton, INPUT_PULLUP);
-    pinMode(pin_pluviometre,0);// input
-    pinMode(pin_girouette, 0); // input
+    pinMode(pin_pluviometre,0);// entrée
+    pinMode(pin_girouette, 0); // entrée
 
     attachInterrupt(digitalPinToInterrupt(pin_anemometre), interrupt_anemometre, CHANGE);    // interruption anémomètre
     attachInterrupt(digitalPinToInterrupt(pin_pluviometre), interrupt_pluviometre, FALLING); // interruption pluviomètre
@@ -212,11 +206,17 @@ void loop() {
 
     // Lis l'état du bouton
     dernier_etat_bouton = etat_bouton;
+    dernier_etat_lu_bouton = etat_lu_bouton;
     etat_lu_bouton = !digitalRead(pin_bouton);
     // Quand le bouton est pressé, la valeur lue est 0 d'ou la nécesité d'inverser la valeur lue pour refleter la valeur du bouton
 
     // Lis la valeur de la girouette
     valeur_lu_girouette = analogRead(pin_girouette);
+
+
+
+
+
 
     //Mesure la vitesse du vent
 
@@ -224,7 +224,7 @@ void loop() {
     //seconde a faire un quart de tour), on considère qu'il n'y a pas de vent.
     if ((tableau_temps_anemometre[index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre + 1]) < 1000) {
 
-        vitesse = pre_calcul_vitesse_vent * (1 / ((tableau_temps_anemometre[index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre + 1]) * 0.004));
+        vitesse_vent = pre_calcul_vitesse_vent * (1 / ((tableau_temps_anemometre[index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre + 1]) * 0.004));
 
         /* Calcul vitesse du vent:
          *
@@ -254,7 +254,7 @@ void loop() {
          * et on obtiens la vitesse du vent en km/h.
          */
 
-        /* Selon la fiche de l'anémomètre, s'il y a un contact par seconde entre les deux broches, le vent soufle à 2.4km/h
+        /* Selon la fiche technique de l'anémomètre, s'il y a un contact par seconde entre les deux broches, le vent soufle à 2.4km/h
          *
          * Donc en théorie, il faut faire la difference des millisecondes écoulées entre deux front déscendants (falling edge),
          *
@@ -269,18 +269,28 @@ void loop() {
     }
     else {
         //pas de vent
-        vitesse = 0;
+        vitesse_vent = 0;
     }
+
+
+
+
+
 
     //mesure le temps pour la pluie
     if ((tableau_temps_pluviometre[index_tableau_pluviometre + 1 ] + 60000) < millis()) {
 
-        temps_pluviometre = (3600000/(tableau_temps_pluviometre[index_tableau_pluviometre] - tableau_temps_pluviometre[index_tableau_pluviometre + 1]))*0.2794;
+        valeur_pluie = (3600000/(tableau_temps_pluviometre[index_tableau_pluviometre] - tableau_temps_pluviometre[index_tableau_pluviometre + 1]))*0.2794;
     }
     else {
         //aucune nouvelle donnée du pluviomètre au bout d'une minute, on considère qu'il ne pleut pas
-        temps_pluviometre = 0;
+        valeur_pluie = 0;
     }
+
+
+
+
+
 
     // Cherche l'index du tableau des direction du vent par rapport à la valeur de la tension lue de la girouette
     for (byte a = 0; a != 16; a++) {
@@ -291,6 +301,11 @@ void loop() {
     }
     //S'il n'y a pas de vent, la valeur sera lue de la girouette sera égale à 0 et l'index dans le tableau ne changera pas
     //mais ne seras pas utilisé pour afficher de direction
+
+
+
+
+
 
     //Debounce bouton
     if (etat_lu_bouton != dernier_etat_lu_bouton) {
@@ -303,22 +318,29 @@ void loop() {
         //est stabilisé, on peut utliliser sa valeur lu pour changer d'écran ou pas.
         etat_bouton = etat_lu_bouton;
     }
-    dernier_etat_lu_bouton = etat_bouton;
+
+
 
     //Regarde si on doit changer d'écran
     if (etat_bouton && !dernier_etat_bouton) {
         //si le bouton viens d'être pressé
         //on change d'écran
 
-        //va à l'écran suivant et rollback à 4
-        menu = (menu++)%4;
+        if(menu==4){
+            //pour si on était dans l'écran d'étalonnage
+            menu = 0;
+        }
+        else{
+            //va à l'écran suivant et rollback à 4
+            menu = (menu++)%4;
+        }
 
         lcd.clear();
         switch (menu){
 
             case 0: //vent
 
-                lcd.print("Vent:");
+                lcd.print("Vent:       km/h");
                 break;
 
             case 1: //pluie
@@ -340,38 +362,40 @@ void loop() {
         }
     }
 
+    if(dernier_debounce_delay + 2000 < millis() && menu == 1){
+        menu = 4;
+    }
 
     lcd.setCursor(0,1);
     lcd.print("                "); //efface la deuxième ligne
 
+
     //affiche les valeurs à l'écran
     switch (menu){
         case 0: //vent
-            lcd.setCursor(5,0);
-            lcd.print("           ");
-            if(!vitesse){
+            lcd.setCursor(6,0);
+            lcd.print("     ");
+            if(!vitesse_vent){
                 lcd.setCursor(6,0);
-                lcd.print(vitesse);
-                lcd.setCursor(12,0);
-                lcd.print("km/h");
+                lcd.print(vitesse_vent);
                 lcd.setCursor(0,1);
                 lcd.print(tableau_direction_vent[index_tableau_direction_vent]);
             }
             else{
-                lcd.setCursor(5,0);
+                lcd.setCursor(2,1);
                 lcd.print("Pas de vent");
             }
             break;
 
         case 1: //pluie
 
-            if(!temps_pluviometre){
+            if(!valeur_pluie){
                 lcd.setCursor(2,1);
                 lcd.print("Pas de pluie");
             }
             else{
                 lcd.setCursor(4,1);
-                lcd.print(temps_pluviometre);
+                lcd.print(valeur_pluie);
                 lcd.print (" mm/m2"); //millimètres par mètre carré par heure
             }
             break;
@@ -382,7 +406,7 @@ void loop() {
             lcd.print(" lux");
             break;
 
-        default: //indice ultraviolet
+        case 3: //indice ultraviolet
             lcd.setCursor(0,1);
             if (ultraviolet >= 11) {
                 lcd.print("    Extreme");
@@ -400,15 +424,34 @@ void loop() {
                 lcd.print("     Normal");
             }
             break;
+
+        default: //étalonnage
+            lcd.setCursor(0,0);
+            lcd.print("     ----->     ");
+            lcd.setCursor(0,0);
+            lcd.print(vitesse_vent);
+            lcd.setCursor(0,12);
+            lcd.print(tableau_valeurs_girouette[index_tableau_direction_vent]);
+            lcd.setCursor(0,1);
+            lcd.print(tableau_direction_vent[index_tableau_direction_vent]);
+            break;
+
     }
 
     // Maquettes écran
 
     //Vent
     //0123456789ABCDEF
-    //Vent:Pas de vent
+    //Vent:  ---  km/h
     //Vent: 10.42 km/h
     //Vent: 5.89  km/h
+    //Ouest Nord Ouest
+    //  Pas de Vent
+    //0123456789ABCDEF
+
+    //étalonnage
+    //0123456789ABCDEF
+    //1023 -----> 1023
     //Ouest Nord Ouest
     //0123456789ABCDEF
 
