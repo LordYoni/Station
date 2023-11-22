@@ -314,8 +314,6 @@ void loop() {
      */
 
   }
-  else {
-  }
 
 
 
