@@ -1,6 +1,7 @@
 // A faire
 
-//Est ce qu'il ne faudrait pas débouncer la pluie ???
+//Est-ce qu'il ne faudrait pas débouncer la pluie bah oui du coup
+//aussi le vent
 //Détailler le calcul de la pluie
 //Détailler le calcul de la lumière
 //aérer le code ?
@@ -216,7 +217,12 @@ void loop() {
 
 
 
-
+  //debounce vent
+  if(dernier_debounce_vent + 50 > millis()){
+    tableau_temps_anemometre[index_tableau_anemometre] = dernier_debounce_vent;
+    index_tableau_anemometre = !index_tableau_anemometre; // Change l'index du tableau
+    dernier_debounce_vent= 0;
+  }
 
     //Mesure la vitesse du vent
 
