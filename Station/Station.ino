@@ -81,32 +81,32 @@ const byte debounce_delay = 50; //en ms
 
 //Définition de toutes les valeurs possibles lors de la lecture de la valeur de la girouette
 /*
- * La girouette donne la direction du vent grace à la valeur de la résistance entre ses deux broches de sortie.
+ * La girouette donne la direction du vent grâce à la valeur de la résistance entre ses deux broches de sortie.
  * Pour connaitre cette direction, il faut transformer la valeur de la résistance en une valeur de tension afin
  * de pouvoir la lire avec l'Arduino. Pour ce faire, un pont diviseur de tension doit être utilisé.
  *
- * L'une des broche de la girouette est reliée à la masse, tandis que l'autre est relié à une résistance
- * de 10 kilo ohms de tirage au 5v, tout cela relié à la broche d'entrée analogique Arduino.
+ * L'une des broches de la girouette est reliée à la masse, tandis que l'autre est relié à une résistance
+ * de 10 kilos ohms de tirage au 5v, tout cela relié à la broche d'entrée analogique Arduino.
  *
  * Grace aux valeurs fournies par la fiche technique, il est possible de calculer pour chaque angle la tension
- * entre la masse et la résistance grace au calcul suivant:
+ * entre la masse et la résistance grace au calcul suivant :
  *
- * tension = ( Umax * résistance girouette ) / ( résistance girouette + résistance de tirage )
+ * tension = (Umax * résistance girouette) / (résistance girouette + résistance de tirage)
  *
- * Avec:
+ * Avec :
  * Umax = 5v
  * résistance girouette = résistance en fonction de l'angle sur la fiche technique
- * résistance de tirage = 10000 (10 kilo ohms)
+ * résistance de tirage = 10000 (10 kilos ohms)
  *
  * Une fois les valeurs des tensions obtenues, il suffit de faire un produit en croix pour obtenir toutes les
- * valeures théoriques lisible par l'Arduino:
+ * valeurs théoriques lisible par l'Arduino :
  *
- * valeur = ( tension * 1023 ) / 5
+ * valeur = ( tension * 1023) / 5
  *
  *(voir tableau Excel pour toutes les valeurs)
  */
 
-//Valeurs théoriques: {785,405,460,83,93,65,184,126,287,244,629,598,944,826,886,702}
+//Valeurs théoriques : {785,405,460,83,93,65,184,126,287,244,629,598,944,826,886,702}
 const word tableau_valeurs_girouette[16][2] = {{787,36}, //N 751 823
                                                {430,15}, //NNE 420 460
                                                {480,15}, //NE 460 500
@@ -153,7 +153,7 @@ const String tableau_direction_vent[] = { //signification des valeurs
 unsigned long dernier_debounce_vent = 0;
 
 
-//Déclaration LCD  639
+//Déclaration LCD 639
 LiquidCrystal lcd(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
 
 //Déclaration capteur lumière/UV I2C
@@ -186,7 +186,7 @@ unsigned long dernier_debounce_delay = 0; //est égal au nombre de millisecondes
 float vitesse_vent; //Vitesse du vent en km/h
 
 //Girouette
-byte index_tableau_direction_vent; //Index dans le tableaux de la direction du vent
+byte index_tableau_direction_vent; //Index dans le tableau de la direction du vent
 word valeur_lu_girouette;          //Valeur lue de la girouette
 boolean pas_trouve;
 
@@ -248,7 +248,7 @@ void loop() {
   dernier_etat_bouton = etat_bouton;
   dernier_etat_lu_bouton = etat_lu_bouton;
   etat_lu_bouton = !digitalRead(pin_bouton);
-  // Quand le bouton est pressé, la valeur lue est 0 d'ou la nécesité d'inverser la valeur lue pour refleter la valeur du bouton
+  // Quand le bouton est pressé, la valeur lue est 0 d'où la nécesité d'inverser la valeur lue pour refleter la valeur du bouton
 
   // Lis la valeur de la girouette
   valeur_lu_girouette = analogRead(pin_girouette);
@@ -265,19 +265,21 @@ void loop() {
 
   //Mesure la vitesse du vent
 
-  //Si l'écart entre les deux temps dans le tableau est superieur à 1 seconde (l'anémomètre à pris plus d'une
-  //seconde a faire un quart de tour), on considère qu'il n'y a pas de vent.
+  //Si l'écart entre les deux temps dans le tableau est superieur à 1 seconde (l'anémomètre a pris plus d'une
+  //seconde à faire un quart de tour), on considère qu'il n'y a pas de vent.
   if ((tableau_temps_anemometre[index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre + 1]) >= 1000) {
+      vitesse_vent = (0.07) * 2 * 3.14 * 3.6 * (1 / ((tableau_temps_anemometre[index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre + 1]) * 0.002));
+  } else {
+      vitesse_vent = 0;
+  }
 
-    vitesse_vent = (0.07) * 2 * 3.14 * 3.6 * (1 / ((tableau_temps_anemometre[index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre + 1]) * 0.002));
-
-    /* Calcul vitesse du vent:
+    /* Calcul vitesse du vent :
          *
          * Vitesse [en km/h] = rayon [en m] * vitesse de rotation [en rad/s] * 3.6
          *
          * Vitesse de rotation [en rad/s] = 2 * pi * N [en tours/seconde]
          *
-         * Donc le calcul complet est: Vitesse = rayon * 2 * pi * N * 3.6
+         * Donc le calcul complet est : Vitesse = rayon * 2 * pi * N * 3.6
          *
          *
          * On sait qu'à chaque quart de tour, le temps écoulé est stocké dans le tableau.
@@ -288,7 +290,7 @@ void loop() {
          * On la multiplie par 4 pour avoir le temps pris pour faire un tour [en ms].
          * On la divise par 1000 pour avoir le temps pris pour faire un tour [en s].
          *
-         * (On simplifie dans le calcul: 4/1000 = 0.004. On multiplie le temps pris pour faire
+         * (On simplifie dans le calcul : 4/1000 = 0.004. On multiplie le temps pris pour faire
          * un quart de tour [en ms] par cette valeur pour avoir le même résultat.)
          *
          * On calcule l'inverse de cette valeur pour avoir le nombre de tours par seconde
@@ -296,17 +298,17 @@ void loop() {
          * Au début du programme, on a précalculé sous forme de constante "rayon * 2 * pi * 3.6"
          *
          * Il nous reste donc plus qu'à multiplier le nombre de tours/seconde par la constante
-         * et on obtiens la vitesse du vent en km/h.
+         * et on obtient la vitesse du vent en km/h.
      */
 
     /* Selon la fiche technique de l'anémomètre, s'il y a un contact par seconde entre les deux broches, le vent soufle à 2.4km/h
          *
-         * Donc en théorie, il faut faire la difference des millisecondes écoulées entre deux front déscendants (falling edge),
+         * Donc en théorie, il faut faire la difference des millisecondes écoulées entre deux fronts déscendants (falling edge),
          *
          * diviser par 1000 pour l'avoir en seconde, l'inverser pour avoir le nombre de tours/seconde
          * et multiplier par 2.4 pour avoir la vitesse de vent en km/h.
          *
-         * Notre calcul ne respecte pas cette méthode car nos tests indiquent que l'anémomètre change d'état tout les
+         * Notre calcul ne respecte pas cette méthode, car nos tests indiquent que l'anémomètre change d'état tous les
          * quarts de tour. On se sert du temps pris pour faire un quart de tour pour calculer la vitesse du vent à la palce.
          *
      */
@@ -334,7 +336,7 @@ void loop() {
 
 
   pas_trouve =1;
-  // Cherche l'index du tableau des direction du vent par rapport à la valeur de la tension lue de la girouette
+  // Cherche l'index du tableau des directions du vent par rapport à la valeur de la tension lue de la girouette
   for (byte a = 0; a != 16; a++) {
     if ((valeur_lu_girouette >= tableau_valeurs_girouette[a][0] - tableau_valeurs_girouette[a][1]) && (valeur_lu_girouette < tableau_valeurs_girouette[a][0] + tableau_valeurs_girouette[a][1])) {
       index_tableau_direction_vent = a;
@@ -342,7 +344,7 @@ void loop() {
       break;
     }
   }
-  //S'il n'y a pas de vent, la valeur sera lue de la girouette sera égale à 0 et l'index dans le tableau ne changera pas
+  //S'il n'y a pas de vent, la valeur sera lue de la girouette sera égale à 0 et l'index dans le tableau ne changera pas,
   //mais ne seras pas utilisé pour afficher de direction
 
 
@@ -354,8 +356,8 @@ void loop() {
   }
 
   if ((millis() - dernier_debounce_delay) > debounce_delay) {
-    //si la valeur lu du bouton n'a pas changé pendant (constante) ms, on considère que l'état du bouton
-    //est stabilisé, on peut utliliser sa valeur lu pour changer d'écran ou pas.
+    //si la valeur lue du bouton n'a pas changé pendant (constante) ms, on considère que l'état du bouton
+    //est stabilisé, on peut utliliser sa valeur lue pour changer d'écran ou pas.
     etat_bouton = etat_lu_bouton;
   }
 
@@ -363,7 +365,7 @@ void loop() {
 
   //Regarde si on doit changer d'écran
   if (etat_bouton && !dernier_etat_bouton) {
-    //si le bouton viens d'être pressé
+    //si le bouton vient d'être pressé,
     //on change d'écran
 
     temps_rafraichissement = 0;
@@ -373,7 +375,7 @@ void loop() {
       menu = 0;
     }
     else{
-      //va à l'écran suivant et rollback à 4
+      //va à l'écran suivant et rollback à 4.
       menu = (menu+1)%4;
     }
 
@@ -513,7 +515,7 @@ void loop() {
 
   //Lumière
   //0123456789ABCDEF
-  //    Lumiere:
+  //    Lumiere :
   //   999999 lux
   //   120 lux
   //0123456789ABCDEF
