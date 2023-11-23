@@ -488,7 +488,7 @@ void loop() {
             case 0: // vent
                 lcd.setCursor(6, 0);
                 lcd.print("     ");
-                if (!vitesse_vent) {
+                if (vitesse_vent) {
                     lcd.setCursor(6, 0);
                     lcd.print(vitesse_vent);
                     lcd.setCursor(0, 1);
