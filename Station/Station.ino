@@ -125,15 +125,15 @@ const float pre_calcul_vitesse_vent = (rayon/100) * 2 * M_PI * 3.6;
 
 //Valeurs théoriques : {785,405,460,83,93,65,184,126,287,244,629,598,944,826,886,702}
 const word tableau_valeurs_girouette[16][2] = {{787,36}, //N   751 823
-                                               {430,15}, //NNE 420 460
-                                               {480,15}, //NE  460 500
-                                               {125,7},  //ENE 90  96
-                                               {139,5},  //E   97  103
-                                               {110,10}, //ESE 61  89
-                                               {216,25}, //SE  183 249
-                                               {160,25}, //SSE 125 175
-                                               {315,20}, //S   290 340
-                                               {266,15}, //SSO 241 291
+                                               {405,15}, //NNE 420 460
+                                               {470,15}, //NE  460 500
+                                               {88,7},  //ENE 90  96
+                                               {95,5},  //E   97  103
+                                               {67,10}, //ESE 61  89
+                                               {190,25}, //SE  183 249
+                                               {130,25}, //SSE 125 175
+                                               {290,20}, //S   290 340
+                                               {249,15}, //SSO 241 291
                                                {638,15}, //SO  622 654
                                                {606,15}, //OSO 590 622
                                                {945,15}, //O   916 974
@@ -166,7 +166,7 @@ const String tableau_direction_vent[] = { //signification des valeurs
     "nord",  "nord nord est",    "nord est",   "est nord est",
     "est",   "est sud est",      "Sud est",    "sud sud est",
     "sud",   "sud sud ouest",    "sud ouest",  "ouest sud ouest",
-    "ouest", "quest nord ouest", "nord ouest", "nord nord ouest"};
+    "ouest", "ouest nord ouest", "nord ouest", "nord nord ouest"};
 
 
 //Déclaration LCD
@@ -209,7 +209,7 @@ word valeur_lu_girouette;          //Valeur lue de la girouette
 boolean pas_trouve;
 
 //Pluviomètre
-unsigned long valeur_pluie;        //valeur de pluie
+float valeur_pluie;        //valeur de pluie
 unsigned long tableau_temps_pluviometre[2] = {0, 0};  // tableau qui répertorie les millisecondes écoulées lors de chaque interrupts du pluviomètre
 boolean index_tableau_pluviometre = 0;                // index tableau pluviomètre
 
@@ -280,7 +280,7 @@ void setup() {
   pinMode(pin_girouette, 0); // entrée
 
   attachInterrupt(digitalPinToInterrupt(pin_anemometre), interrupt_anemometre, FALLING);    // interruption anémomètre
-  attachInterrupt(digitalPinToInterrupt(pin_pluviometre), interrupt_pluviometre, FALLING); // interruption pluviomètre
+  attachInterrupt(digitalPinToInterrupt(pin_pluviometre), interrupt_pluviometre, CHANGE); // interruption pluviomètre
 
   Wire.begin(); //démarre la communication I2C
 
@@ -352,9 +352,11 @@ void loop() {
 
   //Si l'écart entre les deux temps dans le tableau est supérieur à 1 seconde (l'anémomètre a pris plus d'une
   //seconde à faire un quart de tour), on considère qu'il n'y a pas de vent.
-  if ((tableau_temps_anemometre[index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre + 1]) < 1000 && !tableau_temps_anemometre[1]) {
-    //la deuxième condition sert à vérifier s'il y a bien deux valeurs dans le tableau depuis le début du programme et non pas qu'une seule.
-    vitesse_vent = pre_calcul_vitesse_vent * (1 / ((tableau_temps_anemometre[index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre + 1]) * 0.002));
+
+
+  if (tableau_temps_anemometre[!index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre] < 1000 && tableau_temps_anemometre[1]) {
+    //la deuxième condition sert à vérifier s'il y a bien deux valeurs dans le tableau depuis le début du programme et non pas qu'une seule
+    vitesse_vent = pre_calcul_vitesse_vent * (1.0 / (( float(tableau_temps_anemometre[!index_tableau_anemometre] - tableau_temps_anemometre[index_tableau_anemometre]) / 500.0 ) ) );
   }
   else {
     vitesse_vent = 0;
@@ -400,8 +402,11 @@ void loop() {
    */
 
   //mesure le temps pour la pluie
-  if ((tableau_temps_pluviometre[index_tableau_pluviometre + 1] + 60000) < millis()) {
-    valeur_pluie = (3600000 / (tableau_temps_pluviometre[index_tableau_pluviometre] - tableau_temps_pluviometre[index_tableau_pluviometre + 1])) * 0.2794;
+  if ((tableau_temps_pluviometre[!index_tableau_pluviometre] + 60000) > millis()) {
+    //Serial.println();
+    valeur_pluie = (1.0 / float(tableau_temps_pluviometre[!index_tableau_pluviometre] - tableau_temps_pluviometre[index_tableau_pluviometre]))*3600.0 * 0.2794;
+    //Serial.println(float(tableau_temps_pluviometre[!index_tableau_pluviometre] - tableau_temps_pluviometre[index_tableau_pluviometre]));
+    //Serial.println(valeur_pluie);
   }
   else {
     //aucune nouvelle donnée du pluviomètre au bout d'une minute, on considère qu'il ne pleut pas
@@ -488,7 +493,7 @@ void loop() {
     case 0: // vent
       lcd.setCursor(6, 0);
       lcd.print("     ");
-      if (vitesse_vent) {
+      if (vitesse_vent > 0) {
         lcd.setCursor(6, 0);
         lcd.print(vitesse_vent);
         lcd.setCursor(0, 1);
