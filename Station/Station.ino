@@ -245,9 +245,8 @@ void interrupt_anemometre() {
 void interrupt_pluviometre() {
   dernier_debounce_pluie = millis();
   tick_pluviometre = 1;
+  //while (1){}
 }
-
-
 
 void cherche_index_tableau_vent() {
   pas_trouve =1;
@@ -303,6 +302,8 @@ void setup() {
     lcd.clear();
   }
   lcd.print("Vent:       km/h");
+
+  Serial.begin(500000);
 }
 
 
@@ -334,7 +335,7 @@ void loop() {
 
 
   //debounce vent
-  if (dernier_debounce_vent + 50 > millis() && tick_anemometre) {
+  if (dernier_debounce_vent + 10 <= millis() && tick_anemometre) {
     // stocke dans le tableau les millisecondes écoulées
     tableau_temps_anemometre[index_tableau_anemometre] = dernier_debounce_vent;
     index_tableau_anemometre = !index_tableau_anemometre; // Change l'index du tableau
@@ -400,6 +401,8 @@ void loop() {
      * quarts de tour. On se sert du temps pris pour faire un quart de tour pour calculer la vitesse du vent à la place.
      *
    */
+
+  Serial.println(tick_pluviometre);
 
   //mesure le temps pour la pluie
   if ((tableau_temps_pluviometre[!index_tableau_pluviometre] + 60000) > millis()) {
@@ -475,10 +478,24 @@ void loop() {
     }
   }
 
+
+
+
+
+
+
+
+
   if (etat_bouton && dernier_debounce_delay + 2000 < millis() && menu == 1) {
-    menu = 0;
+    menu = 4;
     temps_rafraichissement = 0;
   }
+
+
+
+
+
+
 
 
   if (temps_rafraichissement <= millis()) {
