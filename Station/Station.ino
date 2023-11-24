@@ -342,9 +342,9 @@ void loop() {
     tick_anemometre = 0;
   }
 
-  if (dernier_debounce_pluie + 50 > millis() && tick_pluviometre){
+  if (dernier_debounce_pluie + 50 < millis() && tick_pluviometre){
     // stocke dans le tableau les millisecondes écoulées
-    tableau_temps_pluviometre[index_tableau_pluviometre] = millis();
+    tableau_temps_pluviometre[index_tableau_pluviometre] = dernier_debounce_pluie;
     index_tableau_pluviometre = !index_tableau_pluviometre; // Change l'index du tableau
     tick_pluviometre = 0;
   }
