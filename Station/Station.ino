@@ -526,14 +526,16 @@ void loop() {
 
     case 1: // pluie
 
-      if (!valeur_pluie) {
+      if (valeur_pluie > 0) {
+        lcd.setCursor(4, 1);
+        lcd.print(valeur_pluie);
+        lcd.print(" mm/m2"); // millimètres par mètre carré par heure
         lcd.setCursor(2, 1);
         lcd.print("Pas de pluie");
       }
       else {
-        lcd.setCursor(4, 1);
-        lcd.print(valeur_pluie);
-        lcd.print(" mm/m2"); // millimètres par mètre carré par heure
+        lcd.setCursor(2, 1);
+        lcd.print("Pas de pluie");
       }
       break;
 
