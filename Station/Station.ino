@@ -21,12 +21,17 @@
  * Pluviomètre
  * Capteur lumière
  *
- * Reference capteur lumière groove si1151
+ * Reference capteur lumière : groove si1151
+ * Datasheet :
  * https://wiki.seeedstudio.com/Grove-Sunlight_Sensor/
  *
  * Reference anémomètre, girouette, pluviomètre : SEN-15901
- * Fiche technique :
+ * Datasheet :
  * https://cdn.sparkfun.com/assets/d/1/e/0/6/DS-15901-Weather_Meter.pdf
+ *
+ * Reference capteur température : TMP36
+ * Datasheet :
+ * https://www.gotronic.fr/pj-883.pdf
  */
 
 /* Brochage LCD par rapport à l'Arduino
