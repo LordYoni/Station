@@ -248,6 +248,7 @@ void interrupt_anemometre() {
 
 //Est éxecuté à chaque 0.2794mm de pluie.
 void interrupt_pluviometre() {
+  Serial.println("Interrupt pluviometre");
   dernier_debounce_pluie = millis();
   tick_pluviometre = 1;
   //while (1){}
