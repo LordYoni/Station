@@ -70,6 +70,7 @@ const byte lcd_d4 = 10;
 const byte lcd_d5 = 9;
 const byte lcd_d6 = 8;
 const byte lcd_d7 = 7;
+const byte pin_tmp36 = A1; // La broche utilisée pour lire la valeur du capteur de température TMP36
 //La deuxième broche de ces composants est relié à la masse.
 const byte pin_bouton = 6;
 const byte pin_anemometre = 2;
@@ -218,6 +219,11 @@ float valeur_pluie;        //valeur de pluie
 unsigned long tableau_temps_pluviometre[2] = {0, 0};  // tableau qui répertorie les millisecondes écoulées lors de chaque interrupts du pluviomètre
 boolean index_tableau_pluviometre = 0;                // index tableau pluviomètre
 
+//TMP36
+int valeur_termometre;      //(Connectez la broche Vout au pin A1 sur l'Arduino )
+float temperature;          //(Connectez la broche Vs à 5V sur l'Arduino)
+                            //(Connectez la broche Gnd à une broche GND sur l'Arduino )
+
 
 //Variables interrupts
 volatile unsigned long dernier_debounce_vent = 0;
@@ -279,6 +285,7 @@ void cherche_index_tableau_vent() {
 // Code de démarrage
 void setup() {
   //déclare les broches comme devant être tiré au 5v par l'Arduino
+  pinMode(pin_tmp36, INPUT);
   pinMode(pin_anemometre,INPUT_PULLUP);
   pinMode(pin_bouton, INPUT_PULLUP);
   pinMode(pin_pluviometre,0);// entrée
@@ -297,7 +304,7 @@ void setup() {
 
 
   lcd.clear();
-
+  valeur_termometre = analogRead(pin_tmp36);
   valeur_lu_girouette = analogRead(pin_girouette);
   cherche_index_tableau_vent();
   if(pas_trouve && digitalRead(pin_bouton)){
@@ -337,6 +344,9 @@ void loop() {
 
   // Lis la valeur de la girouette
   valeur_lu_girouette = analogRead(pin_girouette);
+
+  // Lis la valeur du thermomètre
+  valeur_termometre = analogRead(pin_tmp36);
 
 
 
@@ -449,13 +459,13 @@ void loop() {
 
     temps_rafraichissement = 0;
 
-    if (menu == 4) {
+    if (menu == 5) {
       //pour si on était dans l'écran d'étalonnage
       menu = 0;
     }
     else {
       //va à l'écran suivant et rollback à 4.
-      menu = (menu + 1) % 4;
+      menu = (menu + 1) % 5;
     }
 
     lcd.clear();
@@ -471,7 +481,13 @@ void loop() {
       lcd.print("Pluie:");
       break;
 
-    case 2: //lumière
+    case 2: //température
+
+      lcd.setCursor(6, 0);
+      lcd.print("Temp:");
+      break;
+
+    case 3: //lumière
 
       lcd.setCursor(4, 0);
       lcd.print("Lumiere:");
@@ -493,7 +509,7 @@ void loop() {
 
 
   if (etat_bouton && dernier_debounce_delay + 2000 < millis() && menu == 1) {
-    menu = 4;
+    menu = 5;
     temps_rafraichissement = 0;
   }
 
@@ -533,7 +549,7 @@ void loop() {
     case 1: //pluie
 
       lcd.setCursor(4, 1);
-      lcd.print(valeur_pluie, 2); // Ajoutez la précision dont vous avez besoin, 2 dans cet exemple
+      lcd.print(valeur_pluie, 2);
       lcd.print(" mm/m2");  // millimètres par mètre carré par heure
 
       if (valeur_pluie == 0){
@@ -542,13 +558,19 @@ void loop() {
       }
       break;
 
-    case 2: // lumière
+    case 2: // Température
+      lcd.setCursor(3, 1);
+      lcd.print((valeur_termometre * 5.0 / 1024.0 - 0.5) * 100);
+      lcd.print(" C ");
+      break;
+
+    case 3: // lumière
       lcd.setCursor(3, 1);
       lcd.print(map(visible, 0, 65535, 0, 128000));
       lcd.print(" lux");
       break;
 
-    case 3: // indice ultraviolet
+    case 4: // indice ultraviolet
       lcd.setCursor(0, 1);
       if (ultraviolet >= 11) {
         lcd.print("    Extreme");
