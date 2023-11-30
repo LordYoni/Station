@@ -15,9 +15,9 @@
 
 /* Station météo
  *
+ * Carte Arduino UNO
  * Écran LCD 16*2
- * (Potentiomètre)
- * (Résistance 10 kilo ohms)
+ * Résistance 10 kilo ohms et Résistance 220 ohms
  * Bouton poussoir
  * Anémomètre
  * Girouette
