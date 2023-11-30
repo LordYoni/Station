@@ -78,6 +78,7 @@ const float pre_calcul_vitesse_vent = (rayon/100) * 2 * M_PI * 3.6;
 //rayon est donné en centimètres, on le divise par 100 pour l'obtenir en mètres
 //La multiplication par 3.6 permet de convertir la valeur de m/s à km/h.
 
+
 //Définition de toutes les valeurs possibles lors de la lecture de la valeur de la girouette
 /*
  * La girouette donne la direction du vent grâce à la valeur de la résistance entre ses deux broches de sortie.
