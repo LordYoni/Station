@@ -10,7 +10,6 @@
 
 
 
-
 //section Composants
 
 /*
@@ -78,10 +77,12 @@ const byte delai_anti_rebond_bouton         = 50;
 const byte delai_anti_rebond_anemometre     = 10;
 const byte delai_anti_rebond_pluviometre    = 50;
 const byte rafraichissement_par_secondes    = 10; //nombre de fois max où l'affichage est rafraichi
-const float longueur_tiges_anemometre       = 7;  //longueur des tiges de l'anémomètre en centimètres
+const float longueur_tige_anemometre        = 7;  //longueur des tiges de l'anémomètre en centimètres
 const byte temps_mode_etalonnage            = 2;  //temps en secondes pour rentrer en mode étalonnage
+const byte temps_abandon_pluviometre        = 1;  //temps timeout pluviomètre en minute(s)
 
 const byte delai_rafraichissement           = rafraichissement_par_secondes * 10;
+const unsigned int temps_abandon_pluviometre_ms = temps_abandon_pluviometre * 60000;
 const unsigned int temps_mode_etalonnage_ms = temps_mode_etalonnage * 1000;
 const float pre_calcul_vitesse_vent         = (longueur_tige_anemometre/100) * 2 * M_PI * 3.6;
 //la longueur est donné en centimètres, on le divise par 100 pour l'obtenir en mètres
@@ -225,7 +226,7 @@ float temperature;
 //Variables interrupts
 volatile unsigned long dernier_temps_declanchement_anemometre  = 0; //est égal au nombre de millisecondes écoulées lors du dernier déclenchement de l'anémomètre
 volatile boolean anemometre_declanche = 0;                          //est vraie lorsque l'anémomètre a été déclanché
-volatile unsigned long dernier_temps_declanchement_pluviometre = 0  //est égal au nombre de millisecondes écoulées lors du dernier déclenchement du pluviomètre
+volatile unsigned long dernier_temps_declanchement_pluviometre = 0; //est égal au nombre de millisecondes écoulées lors du dernier déclenchement du pluviomètre
 volatile boolean pluviometre_declanche = 0;                         //est vraie lorsque le pluviomètre a été déclanché
 
 
@@ -266,12 +267,12 @@ void cherche_indice_tableau_vent() {
 
 
 /*
-*    ____          _              _              _   __                                           
-*   / ___|___   __| | ___      __| | ___      __| | /_/ _ __ ___   __ _ _ __ _ __ __ _  __ _  ___ 
+*    ____          _              _              _   __
+*   / ___|___   __| | ___      __| | ___      __| | /_/ _ __ ___   __ _ _ __ _ __ __ _  __ _  ___
 *  | |   / _ \ / _` |/ _ \    / _` |/ _ \    / _` |/ _ \ '_ ` _ \ / _` | '__| '__/ _` |/ _` |/ _ \
 *  | |__| (_) | (_| |  __/   | (_| |  __/   | (_| |  __/ | | | | | (_| | |  | | | (_| | (_| |  __/
 *   \____\___/ \__,_|\___|    \__,_|\___|    \__,_|\___|_| |_| |_|\__,_|_|  |_|  \__,_|\__, |\___|
-*                                                                                    |___/      
+*                                                                                    |___/
 */
 //section Code de démarrage
 
@@ -317,12 +318,12 @@ void setup() {
 
 
 /*
-*   ____                   _                    _            _             _      
-*  | __ )  ___  _   _  ___| | ___    _ __  _ __(_)_ __   ___(_)_ __   __ _| | ___ 
+*   ____                   _                    _            _             _
+*  | __ )  ___  _   _  ___| | ___    _ __  _ __(_)_ __   ___(_)_ __   __ _| | ___
 *  |  _ \ / _ \| | | |/ __| |/ _ \  | '_ \| '__| | '_ \ / __| | '_ \ / _` | |/ _ \
 *  | |_) | (_) | |_| | (__| |  __/  | |_) | |  | | | | | (__| | |_) | (_| | |  __/
 *  |____/ \___/ \__,_|\___|_|\___|  | .__/|_|  |_|_| |_|\___|_| .__/ \__,_|_|\___|
-*                                   |_|                       |_|                 
+*                                   |_|                       |_|
 */
 //section Boucle principale
 
@@ -379,7 +380,7 @@ void loop() {
 
 
     //section vent
-  
+
     if (dernier_temps_declanchement_anemometre + delai_anti_rebond_anemometre <= millis() && anemometre_declanche) {
         //stocke dans le tableau les millisecondes écoulées
         tableau_temps_anemometre[indice_tableau_anemometre] = dernier_temps_declanchement_anemometre;
@@ -455,8 +456,8 @@ void loop() {
     }
 
 
-  
-    if ((tableau_temps_pluviometre[!indice_tableau_pluviometre] + 60000) > millis()) {
+
+    if ((tableau_temps_pluviometre[!indice_tableau_pluviometre] + temps_abandon_pluviometre_ms) > millis() && tableau_temps_pluviometre[0,1]) {
         valeur_pluie = (1.0 / float(tableau_temps_pluviometre[!indice_tableau_pluviometre] - tableau_temps_pluviometre[indice_tableau_pluviometre]))*3600.0 * 0.2794;
     }
     else {
@@ -475,19 +476,19 @@ void loop() {
 
 
 
-  
-  
 
 
 
-  
-  
-  
+
+
+
+
     //section Changement d'écran pour le texte
-  
+
     if (etat_bouton && !dernier_etat_bouton) {
         //si le bouton vient d'être pressé,
         //on change d'écran
+
 
         temps_rafraichissement = 0;
 
@@ -535,7 +536,7 @@ void loop() {
 
 
     //section Étalonnage
-  
+
     if (etat_bouton && temps_changement_etat_bouton + temps_mode_etalonnage_ms < millis() && menu == 1) {
         menu = 5;
         temps_rafraichissement = 0;
@@ -548,15 +549,11 @@ void loop() {
     if (temps_rafraichissement <= millis()) {
 
         cherche_indice_tableau_vent();
-        temps_rafraichissement = 100 + millis();
-        lcd.setCursor(0, 1);
-        lcd.print("                "); // efface la deuxième ligne
+        temps_rafraichissement = delai_rafraichissement + millis();
 
         // affiche les valeurs à l'écran
         switch (menu) {
             case 0: // vent
-                lcd.setCursor(6, 0);
-                lcd.print("     ");
                 if (vitesse_vent > 0) {
                     lcd.setCursor(6, 0);
                     lcd.print(vitesse_vent);
@@ -564,8 +561,8 @@ void loop() {
                     lcd.print(tableau_direction_vent[indice_tableau_direction_vent]);
                 }
                 else {
-                    lcd.setCursor(7, 0);
-                    lcd.print("---");
+                    lcd.setCursor(6, 0);
+                    lcd.print(" --- ");
                     lcd.setCursor(2, 1);
                     lcd.print("Pas de vent");
                 }
@@ -574,7 +571,7 @@ void loop() {
             case 1: //pluie
 
                 lcd.setCursor(4, 1);
-                lcd.print(valeur_pluie, 2);
+                lcd.print(valeur_pluie);
                 lcd.print(" mm/m2");  // millimètres par mètre carré par heure
 
                 if (valeur_pluie == 0){
@@ -634,6 +631,7 @@ void loop() {
                     lcd.print(tableau_direction_vent[indice_tableau_direction_vent]);
                 }
                 break;
+        }
+        lcd.print("                ");
     }
-  }
 }
