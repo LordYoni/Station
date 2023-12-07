@@ -9,7 +9,6 @@
 
 
 
-
 //section Composants
 
 /*
@@ -145,6 +144,7 @@ const word tableau_valeurs_girouette[16][2] = {{787,36}, //N
                                                {710,15}};//NNO
 
 //à étalonner à chaque nouveau jour de lancement
+
 
 const String tableau_direction_vent[] = { //signification des valeurs
         "nord",  "nord nord est",    "nord est",   "est nord est",
@@ -570,7 +570,8 @@ void loop() {
 
             case 1: //pluie
 
-                lcd.setCursor(4, 1);
+                lcd.setCursor(0, 1);
+                lcd.print("    ");
                 lcd.print(valeur_pluie);
                 lcd.print(" mm/m2");  // millimètres par mètre carré par heure
 
