@@ -5,7 +5,7 @@
 *   ___) || |/ ___ \| |  | | |_| | |\  |   | |  | | |___  | | | |__| |_| |
 *  |____/ |_/_/   \_\_| |___\___/|_| \_|   |_|  |_|_____| |_| |_____\___/
 *
-*/
+ */
 
 
 
@@ -43,10 +43,9 @@
 
 // section Bibliothèques
 
-//#include <Arduino.h> //ne sert techniquement à rien si on n'arrive pas à faire fonctionner Arduino sur Clion
+#include <Arduino.h>
 #include <LiquidCrystal.h>
 #include <Si115X.h>
-
 
 
 
@@ -174,6 +173,20 @@ Si115X si1151;
 
 //section Déclaration des variables
 
+
+//variables series
+unsigned long dernier_temps_envoi = 1000;
+
+
+//0F
+//vent 4
+//pluie 4
+//temperature 4
+//lum 2
+//0vvv dddd | d=direction vent, v = indice uv
+//checksum 1
+//F0
+
 //Menu
 unsigned long temps_rafraichissement = 0; //nombre de millisecondes écoulées lors du dernier rafraîchissement
 boolean doit_rafraichir = 0; //Est vraie lorsque l'afficheur doit être rafraîchi
@@ -189,7 +202,7 @@ byte menu = 0;
 
 //Variables capteur lumière/UV
 byte valeur_ultraviolet;
-unsigned long visible;
+word visible;
 
 
 //Variables bouton
@@ -219,7 +232,7 @@ boolean indice_tableau_pluviometre = 0;
 
 
 //Capteur de température
-int valeur_termometre;
+float valeur_termometre;
 float temperature;
 
 
@@ -273,7 +286,7 @@ void cherche_indice_tableau_vent() {
 *  | |__| (_) | (_| |  __/   | (_| |  __/   | (_| |  __/ | | | | | (_| | |  | | | (_| | (_| |  __/
 *   \____\___/ \__,_|\___|    \__,_|\___|    \__,_|\___|_| |_| |_|\__,_|_|  |_|  \__,_|\__, |\___|
 *                                                                                    |___/
-*/
+ */
 //section Code de démarrage
 
 
@@ -291,6 +304,7 @@ void setup() {
 
     lcd.begin(16, 2);
     Wire.begin(); //démarre la communication I2C
+    Serial.begin(9600);
 
     if(!si1151.Begin()) {
         lcd.print("Capteur lumiere");
@@ -324,7 +338,7 @@ void setup() {
 *  | |_) | (_) | |_| | (__| |  __/  | |_) | |  | | | | | (__| | |_) | (_| | |  __/
 *  |____/ \___/ \__,_|\___|_|\___|  | .__/|_|  |_|_| |_|\___|_| .__/ \__,_|_|\___|
 *                                   |_|                       |_|
-*/
+ */
 //section Boucle principale
 
 
@@ -375,7 +389,7 @@ void loop() {
 
 
 
-
+    valeur_termometre = (valeur_termometre * 5.0 / 1024.0 - 0.5) * 100.0;
 
 
 
@@ -400,43 +414,43 @@ void loop() {
     }
 
     /* Calcul vitesse du vent :
-     *
-     * Vitesse [en km/h] = rayon [en m] * vitesse de rotation [en rad/s] * 3.6
-     *
-     * Vitesse de rotation [en rad/s] = 2 * pi * N [en tours/seconde]
-     *
-     * Donc le calcul complet est : Vitesse = rayon * 2 * pi * N * 3.6
-     *
-     *
-     * On sait qu'à chaque demi-tour, le temps écoulé est stocké dans le tableau.
-     *
-     * Si on fait la différence des deux valeurs stockées dans le tableau, on obtient
-     * le temps qu'a pris l'anémomètre pour parcourir un demi-tour [en ms].
-     *
-     * On la multiplie par 4 pour avoir le temps pris pour faire un tour [en ms].
-     * On la divise par 1000 pour avoir le temps pris pour faire un tour [en s].
-     *
-     * (On simplifie dans le calcul : 4/1000 = 0.004. On multiplie le temps pris pour faire
-     * un demi-tour [en ms] par cette valeur pour avoir le même résultat.)
-     *
-     * On calcule l'inverse de cette valeur pour avoir le nombre de tours par seconde
-     *
-     * Au début du programme, on a pré calculé sous forme de constante "rayon * 2 * pi * 3.6"
-     *
-     * Il nous reste donc plus qu'à multiplier le nombre de tours/seconde par la constante
-     * et on obtient la vitesse du vent en km/h.
+       *
+       * Vitesse [en km/h] = rayon [en m] * vitesse de rotation [en rad/s] * 3.6
+       *
+       * Vitesse de rotation [en rad/s] = 2 * pi * N [en tours/seconde]
+       *
+       * Donc le calcul complet est : Vitesse = rayon * 2 * pi * N * 3.6
+       *
+       *
+       * On sait qu'à chaque demi-tour, le temps écoulé est stocké dans le tableau.
+       *
+       * Si on fait la différence des deux valeurs stockées dans le tableau, on obtient
+       * le temps qu'a pris l'anémomètre pour parcourir un demi-tour [en ms].
+       *
+       * On la multiplie par 4 pour avoir le temps pris pour faire un tour [en ms].
+       * On la divise par 1000 pour avoir le temps pris pour faire un tour [en s].
+       *
+       * (On simplifie dans le calcul : 4/1000 = 0.004. On multiplie le temps pris pour faire
+       * un demi-tour [en ms] par cette valeur pour avoir le même résultat.)
+       *
+       * On calcule l'inverse de cette valeur pour avoir le nombre de tours par seconde
+       *
+       * Au début du programme, on a pré calculé sous forme de constante "rayon * 2 * pi * 3.6"
+       *
+       * Il nous reste donc plus qu'à multiplier le nombre de tours/seconde par la constante
+       * et on obtient la vitesse du vent en km/h.
      */
 
     /* Selon la fiche technique de l'anémomètre, s'il y a un contact par seconde entre les deux broches, le vent souffle à 2.4km/h
-     *
-     * Donc en théorie, il faut faire la difference des millisecondes écoulées entre deux fronts déscendants (falling edge),
-     *
-     * diviser par 1000 pour l'avoir en seconde, l'inverser pour avoir le nombre de tours/seconde
-     * et multiplier par 2.4 pour avoir la vitesse de vent en km/h.
-     *
-     * Notre calcul ne respecte pas cette méthode, car nos tests indiquent que l'anémomètre change d'état tous les
-     * quarts de tour. On se sert du temps pris pour faire un demi-tour pour calculer la vitesse du vent à la place.
-     *
+       *
+       * Donc en théorie, il faut faire la difference des millisecondes écoulées entre deux fronts déscendants (falling edge),
+       *
+       * diviser par 1000 pour l'avoir en seconde, l'inverser pour avoir le nombre de tours/seconde
+       * et multiplier par 2.4 pour avoir la vitesse de vent en km/h.
+       *
+       * Notre calcul ne respecte pas cette méthode, car nos tests indiquent que l'anémomètre change d'état tous les
+       * quarts de tour. On se sert du temps pris pour faire un demi-tour pour calculer la vitesse du vent à la place.
+       *
      */
 
 
@@ -465,13 +479,13 @@ void loop() {
         valeur_pluie = 0;
     }
     /* Calcul pluie :
-     *
-     * Pluie/h [en mm/m²] = nombre d'activations du pluviomètre par heure (moyenne) * volume pour une activation
-     *
-     * Donc pour le nombre d'activations par seconde, il faut faire la difference des millisecondes écoulées entre deux fronts déscendants (falling edge),
-     * l'inverser pour avoir le nombre de d'activations/seconde, puis ont le multiplient par 3600 pour savoir pour une heure le nombre d'activations théorique
-     * et multiplier par 0.2794 pour avoir le volume de pluie par heure en mm/m².
-     *
+       *
+       * Pluie/h [en mm/m²] = nombre d'activations du pluviomètre par heure (moyenne) * volume pour une activation
+       *
+       * Donc pour le nombre d'activations par seconde, il faut faire la difference des millisecondes écoulées entre deux fronts déscendants (falling edge),
+       * l'inverser pour avoir le nombre de d'activations/seconde, puis ont le multiplient par 3600 pour savoir pour une heure le nombre d'activations théorique
+       * et multiplier par 0.2794 pour avoir le volume de pluie par heure en mm/m².
+       *
      */
 
 
@@ -556,7 +570,7 @@ void loop() {
             case 0: // vent
                 if (vitesse_vent > 0) {
                     lcd.setCursor(6, 0);
-                    lcd.print(vitesse_vent);
+                    lcd.print(vitesse_vent,2);
                     lcd.setCursor(0, 1);
                     lcd.print(tableau_direction_vent[indice_tableau_direction_vent]);
                 }
@@ -583,7 +597,7 @@ void loop() {
 
             case 2: // Température
                 lcd.setCursor(3, 1);
-                lcd.print((valeur_termometre * 5.0 / 1024.0 - 0.5) * 100);
+                lcd.print(valeur_termometre);
                 lcd.print(" C ");
                 break;
 
@@ -635,4 +649,22 @@ void loop() {
         }
         lcd.print("                ");
     }
+
+    if(dernier_temps_envoi <= millis()){
+        dernier_temps_envoi = millis() + 1000;
+        Serial.print(0x08,HEX);
+        Serial.print(vitesse_vent);
+        Serial.print(",");
+        Serial.print(valeur_pluie);
+        Serial.print(",");
+        Serial.print(valeur_termometre);
+        Serial.print(",");
+        Serial.print(visible);
+        Serial.print(",");
+        Serial.print(indice_tableau_direction_vent,HEX);
+        Serial.print(",");
+        Serial.print(valeur_ultraviolet);
+        Serial.println(0x0F,HEX);
+    }
+
 }
